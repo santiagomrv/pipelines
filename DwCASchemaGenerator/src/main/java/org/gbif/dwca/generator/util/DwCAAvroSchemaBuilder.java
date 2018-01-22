@@ -75,7 +75,7 @@ public class DwCAAvroSchemaBuilder implements DwCASchemaBuilder {
             .append(termName)
             .append("\",")
             .append("\"type\":[\"null\",\"string\"]")
-            .append(",\"default\":\"\"")
+            .append(",\"default\": null")
             .append(", \"doc\":\"")
             .append(fields.get(i).getIdentifier())
             .append("\"")
