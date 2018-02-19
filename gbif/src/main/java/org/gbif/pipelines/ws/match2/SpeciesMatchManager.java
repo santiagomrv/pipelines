@@ -13,10 +13,9 @@ import org.gbif.pipelines.interpretation.taxonomy.TaxonomyInterpretationExceptio
 import org.gbif.pipelines.io.avro.ExtendedRecord;
 
 import java.io.IOException;
-import java.time.LocalDateTime;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 
 import org.slf4j.Logger;
@@ -43,7 +42,8 @@ public class SpeciesMatchManager {
    * @throws TaxonomyInterpretationException in case of errors
    */
   public static NameUsageMatch2 getMatch(ExtendedRecord extendedRecord) throws TaxonomyInterpretationException {
-    NameUsageMatch2 nameUsageMatch = callSpeciesMatchWs(extendedRecord.getCoreTerms());
+    NameUsageMatch2 nameUsageMatch = tryNameUsageMatch(extendedRecord);
+
 
     if (!isSuccessfulMatch(nameUsageMatch) && hasIdentifications(extendedRecord)) {
       LOG.info("Retrying match with identification extension");
@@ -51,13 +51,8 @@ public class SpeciesMatchManager {
       List<Map<CharSequence, CharSequence>> identifications =
         extendedRecord.getExtensions().get(DwcTerm.Identification.qualifiedName());
 
-      // FIXME: use new generic functions to parse the date??
-      // sort them by date identified
-      // Ask Markus D if this can be moved to the API?
-      identifications.sort(Comparator.comparing((Map<CharSequence, CharSequence> map) -> LocalDateTime.parse(map.get(
-        DwcTerm.dateIdentified))).reversed());
       for (Map<CharSequence, CharSequence> record : identifications) {
-        nameUsageMatch = callSpeciesMatchWs(record);
+        nameUsageMatch = tryNameUsageMatch(record);
         if (isSuccessfulMatch(nameUsageMatch)) {
           LOG.info("match with identificationId {} succeed", record.get(DwcTerm.identificationID.name()));
           return nameUsageMatch;
@@ -69,49 +64,36 @@ public class SpeciesMatchManager {
     return nameUsageMatch;
   }
 
-  private static NameUsageMatch2 callSpeciesMatchWs(Map<CharSequence, CharSequence> terms)
+  private static Optional<NameUsageMatch2> tryNameUsageMatch(ExtendedRecord record)
     throws TaxonomyInterpretationException {
-    TaxonomyFieldsWorkingCopy workingCopy = new TaxonomyFieldsWorkingCopy(terms);
 
     SpeciesMatch2Service service = SpeciesMatch2ServiceRest.SINGLE.getService();
 
-    Call<NameUsageMatch2> call = service.match2(workingCopy.kingdom,
-                                                workingCopy.phylum,
-                                                workingCopy.clazz,
-                                                workingCopy.order,
-                                                workingCopy.family,
-                                                workingCopy.genus,
-                                                workingCopy.rank != null ? workingCopy.rank.name() : null,
-                                                workingCopy.scientificName,
-                                                false,
-                                                false);
-
-    NameUsageMatch2 responseModel = null;
+    Call<NameUsageMatch2> call = service.match(NameUsageMatchQueryConverter.convert(record));
 
     try {
       Response<NameUsageMatch2> response = call.execute();
+      if(response.isSuccessful()) {
+        NameUsageMatch2 nameUsageMatch =response.body();
+        // checking for unexpected response
+        return isEmptyResponse(nameUsageMatch) ? Optional.empty() : Optional.ofNullable(response.body());
+      }
 
-      responseModel = response.body();
     } catch (IOException e) {
       throw new TaxonomyInterpretationException("Error calling the match2 species name WS", e);
     }
 
-    // checking for unexpected response
-    if (isEmptyResponse(responseModel)) {
-      throw new TaxonomyInterpretationException("Empty response from match2 species name WS");
-    }
-
-    return responseModel;
+    return Optional.empty();
   }
 
   private static boolean isEmptyResponse(NameUsageMatch2 response) {
-    return response == null || (response.getUsage() == null
-                                && response.getClassification() == null
-                                && response.getDiagnostics() == null);
+    return Objects.isNull(response) ||
+           (Objects.isNull(response.getUsage()) && Objects.isNull(response.getClassification())
+            && Objects.isNull(response.getDiagnostics()));
   }
 
   private static boolean isSuccessfulMatch(NameUsageMatch2 responseModel) {
-    return !NameUsageMatch.MatchType.NONE.equals(responseModel.getDiagnostics().getMatchType());
+    return NameUsageMatch.MatchType.NONE != responseModel.getDiagnostics().getMatchType();
   }
 
   private static boolean hasIdentifications(ExtendedRecord extendedRecord) {

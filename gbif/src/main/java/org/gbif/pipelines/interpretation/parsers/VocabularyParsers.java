@@ -3,11 +3,13 @@ package org.gbif.pipelines.interpretation.parsers;
 import org.gbif.api.vocabulary.BasisOfRecord;
 import org.gbif.api.vocabulary.EstablishmentMeans;
 import org.gbif.api.vocabulary.LifeStage;
+import org.gbif.api.vocabulary.Rank;
 import org.gbif.api.vocabulary.Sex;
 import org.gbif.api.vocabulary.TypeStatus;
 import org.gbif.common.parsers.BasisOfRecordParser;
 import org.gbif.common.parsers.EstablishmentMeansParser;
 import org.gbif.common.parsers.LifeStageParser;
+import org.gbif.common.parsers.RankParser;
 import org.gbif.common.parsers.SexParser;
 import org.gbif.common.parsers.TypeStatusParser;
 import org.gbif.common.parsers.core.EnumParser;
@@ -29,6 +31,7 @@ public class VocabularyParsers<T extends Enum<T>> {
   private static final SexParser SEX_PARSER = SexParser.getInstance();
   private static final EstablishmentMeansParser EST_PARSER = EstablishmentMeansParser.getInstance();
   private static final LifeStageParser LST_PARSER = LifeStageParser.getInstance();
+  private static final RankParser RANK_PARSER = RankParser.getInstance();
 
   //Parser to be used
   private final EnumParser<T> parser;
@@ -82,6 +85,24 @@ public class VocabularyParsers<T extends Enum<T>> {
    */
   public static VocabularyParsers<TypeStatus> typeStatusParser(){
     return new VocabularyParsers<>(TYPE_PARSER, DwcTerm.typeStatus);
+  }
+
+
+  /**
+   *
+   * @return a type status parser.
+   */
+  public static VocabularyParsers<Rank> rankParser(){
+    return new VocabularyParsers<>(RANK_PARSER, DwcTerm.taxonRank);
+  }
+
+
+  /**
+   *
+   * @return a type status parser.
+   */
+  public static VocabularyParsers<Rank> verbatimTaxonRankParser(){
+    return new VocabularyParsers<>(RANK_PARSER, DwcTerm.verbatimTaxonRank);
   }
 
   /**
