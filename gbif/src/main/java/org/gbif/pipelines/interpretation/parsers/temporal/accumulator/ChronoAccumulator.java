@@ -18,8 +18,9 @@ import static org.apache.commons.lang3.StringUtils.isNumeric;
  */
 public class ChronoAccumulator {
 
-  Map<ChronoField, String> valueMap = new EnumMap<>(ChronoField.class);
-  private ChronoField lastParsed = null;
+  private final Map<ChronoField, String> valueMap = new EnumMap<>(ChronoField.class);
+
+  private ChronoField lastParsed;
 
   public static ChronoAccumulator from(String year, String month, String day) {
     ChronoAccumulator temporal = new ChronoAccumulator();
@@ -36,11 +37,10 @@ public class ChronoAccumulator {
    * @param rawValue raw value for parsing
    */
   public void put(ChronoField key, String rawValue) {
-    if (StringUtils.isEmpty(rawValue)) {
-      return;
+    if (!StringUtils.isEmpty(rawValue)) {
+      valueMap.put(key, rawValue);
+      lastParsed = key;
     }
-    valueMap.put(key, rawValue);
-    lastParsed = key;
   }
 
   /**
@@ -56,7 +56,7 @@ public class ChronoAccumulator {
    */
   public ChronoAccumulator merge(ChronoAccumulator chronoAccumulator) {
     valueMap.putAll(chronoAccumulator.valueMap);
-    chronoAccumulator.getLastParsed().ifPresent(chronoField -> this.lastParsed = chronoField);
+    chronoAccumulator.getLastParsed().ifPresent(chronoField -> lastParsed = chronoField);
     return this;
   }
 
@@ -64,7 +64,7 @@ public class ChronoAccumulator {
    * Copies CHRONO FILED values from the specified accumulator to this accumulator.
    * If a chrono filed is present, the field will be replaced by the value from accumulator param
    */
-  public void putAllAndReplce(ChronoAccumulator accumulator) {
+  public void putAllAndReplace(ChronoAccumulator accumulator) {
     valueMap.putAll(accumulator.valueMap);
   }
 
@@ -80,7 +80,11 @@ public class ChronoAccumulator {
    * Checks all value in the folder are numeric, except month
    */
   public boolean areAllNumeric() {
-    return valueMap.entrySet().stream().anyMatch(x -> !x.getKey().equals(MONTH_OF_YEAR) && !isNumeric(x.getValue()));
+    return valueMap.entrySet().stream().anyMatch(x -> MONTH_OF_YEAR != x.getKey() && !isNumeric(x.getValue()));
   }
 
+
+  public String getChronoFileValue(ChronoField chronoField) {
+    return valueMap.get(chronoField);
+  }
 }

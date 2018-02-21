@@ -10,6 +10,7 @@ import java.time.Month;
 import java.time.Year;
 import java.time.temporal.Temporal;
 import java.util.Optional;
+import java.util.StringJoiner;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
@@ -23,6 +24,8 @@ public interface TemporalRecordInterpreter extends Function<ExtendedRecord, Inte
           .orElse("")
           .toString();
 
+
+
       // Get all raw values
       String rawYear = getValueFunc.apply(extendedRecord, DwcTerm.year);
       String rawMonth = getValueFunc.apply(extendedRecord, DwcTerm.month);
@@ -33,22 +36,21 @@ public interface TemporalRecordInterpreter extends Function<ExtendedRecord, Inte
       ParsedTemporalDates temporalDates = TemporalParser.parse(rawYear, rawMonth, rawDay, rawEventDate);
 
       // Get all parsed values
-      Integer year = temporalDates.getYear().map(Year::getValue).orElse(null);
-      Integer month = temporalDates.getMonth().map(Month::getValue).orElse(null);
-      Integer day = temporalDates.getDay().orElse(null);
-      String from = temporalDates.getFrom().map(Temporal::toString).orElse(null);
-      String to = temporalDates.getTo().map(Temporal::toString).orElse(null);
-      //TODO: IMPROVE STRING JOIN FORMAT
-      String eventDay = String.join("/", from, to);
+      temporalDates.getYear().map(Year::getValue).ifPresent(temporalRecord::setYear);
+      temporalDates.getMonth().map(Month::getValue).ifPresent(temporalRecord::setMonth);
+      temporalDates.getDay().ifPresent(temporalRecord::setDay);
 
+      //TODO: move delimiter definition to a more reusable  class
+      StringJoiner eventDay = new StringJoiner("/");
+      temporalDates.getFrom().map(Temporal::toString).ifPresent(eventDay::add);
+      temporalDates.getTo().map(Temporal::toString).ifPresent(eventDay::add);
+      //TODO: IMPROVE STRING JOIN FORMAT
       // Set all parsed values
-      temporalRecord.setYear(year);
-      temporalRecord.setMonth(month);
-      temporalRecord.setDay(day);
-      temporalRecord.setEventDate(eventDay);
+      temporalRecord.setEventDate(eventDay.toString());
 
       Interpretation<ExtendedRecord> interpretation = Interpretation.of(extendedRecord);
       temporalDates.getIssueList().forEach(issue -> interpretation.withValidation(Interpretation.Trace.of(issue)));
+
       return interpretation;
     };
   }

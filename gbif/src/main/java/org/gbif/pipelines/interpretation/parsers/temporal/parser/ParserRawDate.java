@@ -44,9 +44,11 @@ class ParserRawDate {
     int length = input.length;
     if (length == 1) {
       return parseSizeOne(lastParsed, input);
-    } else if (length == 2) {
+    }
+    if (length == 2) {
       return parseSizeTwo(lastParsed, input);
-    } else if (length == 3) {
+    }
+    if (length == 3) {
       return parseSizeThree(input);
     }
 

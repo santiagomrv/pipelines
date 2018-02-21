@@ -69,7 +69,7 @@ public class TemporalParser {
       toAccumulator.putAllIfAbsent(fromAccumulator);
     } else {
       // Use baseAccumulator value toAccumulator improve parsed date
-      fromAccumulator.putAllAndReplce(baseAccumulator);
+      fromAccumulator.putAllAndReplace(baseAccumulator);
     }
 
     Temporal fromTemporal = TEMPORAL_FUNC.apply(fromAccumulator, issueList);
